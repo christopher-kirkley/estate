@@ -1,0 +1,8 @@
+{
+  "home_lat": 45.5152,
+  "home_lng": -122.6784,
+  "nearby_radius_miles": 3,
+  "refresh_hours": 24,
+  "timezone": "America/Los_Angeles",
+  "port": 8787
+}

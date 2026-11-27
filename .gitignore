@@ -1,0 +1,9 @@
+# Fetched listings (rebuilt by the app)
+data/
+
+__pycache__/
+*.pyc
+.DS_Store
+
+# Local settings, including home coordinates (copy config.example.json)
+config.json

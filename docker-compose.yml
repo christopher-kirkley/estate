@@ -1,0 +1,10 @@
+services:
+  estate-sales:
+    build: .
+    container_name: estate-sales
+    restart: unless-stopped
+    ports:
+      - "8787:8787"
+    volumes:
+      - ./config.json:/config/config.json:ro
+      - ./data:/data

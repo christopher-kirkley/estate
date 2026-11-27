@@ -1,0 +1,342 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="referrer" content="no-referrer">
+<title>Estate sales near home</title>
+<style>
+  :root {
+    --bg: #f4efe6; --card: #fffdf8; --ink: #2a2520; --muted: #766c60; --line: #e2d9ca;
+    --accent: #1f5f8b; --accent-ink: #fff; --near: #2f7d4f; --chip: #efe7d8; --today: #fbe3a6;
+    --new: #b4441f;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #191715; --card: #23201d; --ink: #ece6dc; --muted: #a2978a; --line: #38332d;
+      --accent: #7db8e0; --accent-ink: #10202c; --near: #6fc392; --chip: #2f2b26; --today: #5b4a1c;
+      --new: #f08a63;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--ink);
+    font: 16px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    padding: 0 16px calc(40px + env(safe-area-inset-bottom));
+  }
+  main, header { max-width: 760px; margin: 0 auto; }
+  header { padding: 22px 0 6px; display: flex; align-items: flex-end; gap: 12px; }
+  h1 { font: 700 26px/1.15 Georgia, "Times New Roman", serif; margin: 0; }
+  .sub { color: var(--muted); font-size: 14px; margin-top: 4px; }
+  .grow { flex: 1; min-width: 0; }
+  button.refresh {
+    font: inherit; font-size: 14px; padding: 8px 12px; border-radius: 999px; cursor: pointer;
+    border: 1px solid var(--line); background: var(--card); color: var(--ink); white-space: nowrap;
+  }
+  button.refresh:disabled { opacity: .55; cursor: default; }
+  .notice { margin: 12px 0 0; padding: 10px 12px; border-radius: 10px; background: var(--chip); font-size: 14px; }
+  h2 {
+    font: 700 13px/1 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    letter-spacing: .08em; text-transform: uppercase; color: var(--muted);
+    margin: 28px 0 10px; display: flex; gap: 8px; align-items: baseline;
+  }
+  h2 .count { font-weight: 400; letter-spacing: 0; text-transform: none; }
+  .empty { color: var(--muted); padding: 14px; border: 1px dashed var(--line); border-radius: 14px; font-size: 15px; }
+  .card {
+    background: var(--card); border: 1px solid var(--line); border-radius: 14px;
+    margin-bottom: 14px; overflow: hidden;
+  }
+  .card.near { border-color: var(--near); box-shadow: 0 0 0 1px var(--near); }
+  .body { padding: 14px 14px 12px; }
+  .top { display: flex; gap: 10px; align-items: flex-start; }
+  .title { font: 700 19px/1.2 Georgia, "Times New Roman", serif; margin: 0; }
+  .title a { color: inherit; text-decoration: none; }
+  .dist {
+    margin-left: auto; flex: none; font-weight: 700; font-size: 15px; padding: 3px 10px;
+    border-radius: 999px; background: var(--chip); white-space: nowrap;
+  }
+  .near .dist { background: var(--near); color: var(--card); }
+  .meta { color: var(--muted); font-size: 14px; margin-top: 2px; }
+  .tag { font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--new); margin-right: 6px; }
+  .addr { display: inline-block; margin-top: 8px; color: var(--accent); text-decoration: none; font-size: 15px; }
+  .addr:hover, .more a:hover { text-decoration: underline; }
+  .days { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+  .day { background: var(--chip); border-radius: 8px; padding: 4px 9px; font-size: 14px; }
+  .day b { font-weight: 700; margin-right: 4px; }
+  .day.today { background: var(--today); }
+  .strip {
+    display: flex; gap: 6px; overflow-x: auto; padding: 0 14px 14px; scroll-snap-type: x proximity;
+    -webkit-overflow-scrolling: touch; scrollbar-width: thin;
+  }
+  .strip button {
+    flex: none; padding: 0; border: 0; background: var(--chip); border-radius: 8px; overflow: hidden;
+    cursor: zoom-in; scroll-snap-align: start; height: 132px; min-width: 100px;
+  }
+  .strip img { height: 132px; width: auto; display: block; }
+  .nophotos { padding: 0 14px 14px; color: var(--muted); font-size: 14px; }
+  .more { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 10px; font-size: 14px; align-items: center; }
+  .more a { color: var(--accent); text-decoration: none; }
+  details.desc { margin-top: 8px; font-size: 14px; }
+  details.desc summary { color: var(--muted); cursor: pointer; }
+  details.desc p { white-space: pre-line; margin: 8px 0 0; }
+  details.group > summary { list-style: none; cursor: pointer; }
+  details.group > summary::-webkit-details-marker { display: none; }
+  details.group > summary h2::after { content: "show"; font-weight: 400; letter-spacing: 0; text-transform: none; color: var(--accent); }
+  details.group[open] > summary h2::after { content: "hide"; }
+  footer { max-width: 760px; margin: 30px auto 0; color: var(--muted); font-size: 13px; }
+  footer a { color: inherit; }
+
+  dialog.viewer { border: 0; padding: 0; margin: 0; width: 100vw; height: 100dvh; max-width: none; max-height: none; background: #000; color: #fff; }
+  dialog.viewer::backdrop { background: #000; }
+  .slides { display: flex; height: 100%; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; }
+  .slides::-webkit-scrollbar { display: none; }
+  .slide { flex: none; width: 100vw; height: 100%; scroll-snap-align: center; display: flex; align-items: center; justify-content: center; }
+  .slide img { max-width: 100%; max-height: 100%; object-fit: contain; }
+  .viewer .bar {
+    position: fixed; top: 0; left: 0; right: 0; display: flex; justify-content: space-between; align-items: center;
+    padding: calc(10px + env(safe-area-inset-top)) 14px 10px; font-size: 14px;
+    background: linear-gradient(#000a, #0000); pointer-events: none;
+  }
+  .viewer .bar button, .viewer .nav {
+    pointer-events: auto; font: inherit; color: #fff; background: #0008; border: 1px solid #fff5;
+    border-radius: 999px; padding: 6px 14px; cursor: pointer;
+  }
+  .viewer .nav { position: fixed; top: 50%; transform: translateY(-50%); padding: 10px 14px; font-size: 20px; }
+  .viewer .prev { left: 10px; } .viewer .next { right: 10px; }
+  @media (hover: none) { .viewer .nav { display: none; } }
+</style>
+</head>
+<body>
+<header>
+  <div class="grow">
+    <h1>Estate sales near home</h1>
+    <div class="sub" id="sub">Loading…</div>
+  </div>
+  <button class="refresh" id="refresh" type="button">Refresh</button>
+</header>
+<main id="main"></main>
+<footer id="footer"></footer>
+
+<dialog class="viewer" id="viewer">
+  <div class="slides" id="slides"></div>
+  <div class="bar"><span id="counter"></span><button type="button" id="close">Close</button></div>
+  <button type="button" class="nav prev" id="prev" aria-label="Previous photo">‹</button>
+  <button type="button" class="nav next" id="next" aria-label="Next photo">›</button>
+</dialog>
+
+<script>
+const PHOTO_HOST = "https://www.estatesale-finder.com/";
+const NEW_WINDOW_HOURS = 48;
+const $ = (id) => document.getElementById(id);
+
+function el(tag, attrs, ...children) {
+  const node = document.createElement(tag);
+  for (const [key, value] of Object.entries(attrs || {})) {
+    if (value === null || value === undefined || value === false) continue;
+    if (key === "class") node.className = value;
+    else if (key === "text") node.textContent = value;
+    else node.setAttribute(key, value);
+  }
+  for (const child of children) if (child) node.append(child);
+  return node;
+}
+
+const pad = (n) => String(n).padStart(2, "0");
+const isoDate = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+const fromIso = (s) => new Date(+s.slice(0, 4), +s.slice(5, 7) - 1, +s.slice(8, 10));
+const shortDate = (s) => fromIso(s).toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" });
+const weekdayShort = (s) => fromIso(s).toLocaleDateString(undefined, { weekday: "short" });
+const safeUrl = (u, prefix) => (typeof u === "string" && u.startsWith(prefix) ? u : null);
+
+function ago(iso) {
+  const minutes = Math.max(0, Math.round((Date.now() - new Date(iso)) / 60000));
+  if (minutes < 2) return "just now";
+  if (minutes < 90) return `${minutes} min ago`;
+  if (minutes < 36 * 60) return `${Math.round(minutes / 60)} h ago`;
+  return `${Math.round(minutes / 1440)} days ago`;
+}
+
+function clockTime(iso) {
+  const [h, m] = iso.slice(11, 16).split(":").map(Number);
+  return `${((h + 11) % 12) + 1}${m ? ":" + pad(m) : ""}${h < 12 ? "am" : "pm"}`;
+}
+
+/* ---------- photo viewer ---------- */
+const viewer = $("viewer"), slides = $("slides");
+let viewerCount = 0;
+function currentSlide() { return Math.round(slides.scrollLeft / slides.clientWidth); }
+function updateCounter() { $("counter").textContent = `${currentSlide() + 1} / ${viewerCount}`; }
+function openViewer(photos, index) {
+  slides.replaceChildren(...photos.map((p) =>
+    el("div", { class: "slide" }, el("img", { src: p.full, loading: "lazy", alt: "Sale photo", referrerpolicy: "no-referrer" }))));
+  viewerCount = photos.length;
+  viewer.showModal();
+  slides.scrollTo({ left: index * slides.clientWidth, behavior: "instant" });
+  updateCounter();
+}
+function step(by) { slides.scrollBy({ left: by * slides.clientWidth, behavior: "smooth" }); }
+slides.addEventListener("scroll", updateCounter, { passive: true });
+$("close").addEventListener("click", () => viewer.close());
+$("prev").addEventListener("click", () => step(-1));
+$("next").addEventListener("click", () => step(1));
+viewer.addEventListener("close", () => slides.replaceChildren());
+viewer.addEventListener("keydown", (e) => {
+  if (e.key === "ArrowLeft") step(-1);
+  if (e.key === "ArrowRight") step(1);
+});
+
+/* ---------- cards ---------- */
+function dayChips(sale, from, to, today) {
+  const row = el("div", { class: "days" });
+  const days = (sale.days || []).filter((d) => d.date >= from && d.date <= to);
+  if (days.length) {
+    for (const d of days) {
+      const isToday = d.date === today;
+      row.append(el("span", { class: "day" + (isToday ? " today" : "") },
+        el("b", { text: isToday ? "Today" : weekdayShort(d.date) }), d.hours || "open"));
+    }
+  } else if (sale.start) {
+    const start = sale.start.slice(0, 10), end = (sale.end || sale.start).slice(0, 10);
+    const range = start === end ? shortDate(start) : `${shortDate(start)} – ${shortDate(end)}`;
+    row.append(el("span", { class: "day" }, `${range}, ${clockTime(sale.start)}–${clockTime(sale.end || sale.start)}`));
+  } else {
+    row.append(el("span", { class: "day" }, "Recurring — check the listing for dates"));
+  }
+  return row;
+}
+
+function card(sale, ctx, opts) {
+  const photos = (sale.photos || [])
+    .map((p) => ({ full: safeUrl(p.full, PHOTO_HOST), thumb: safeUrl(p.thumb, PHOTO_HOST) }))
+    .filter((p) => p.full);
+  const listing = safeUrl(sale.url, PHOTO_HOST);
+  const isNew = sale.first_seen && Date.now() - new Date(sale.first_seen) < NEW_WINDOW_HOURS * 3600e3;
+  const lastDay = !opts.ongoing && sale.end && sale.end.slice(0, 10) === ctx.today;
+
+  const meta = [sale.organizer, sale.region].filter(Boolean).join(" · ");
+  const body = el("div", { class: "body" },
+    el("div", { class: "top" },
+      el("div", { class: "grow" },
+        el("h3", { class: "title" }, el("a", { href: listing, target: "_blank", rel: "noopener", text: sale.title })),
+        el("div", { class: "meta" },
+          isNew ? el("span", { class: "tag", text: "New" }) : null,
+          lastDay ? el("span", { class: "tag", text: "Last day" }) : null,
+          meta)),
+      el("span", { class: "dist", title: "Straight-line distance from home", text: `${sale.distance_miles.toFixed(1)} mi` })),
+    el("a", { class: "addr", href: safeUrl(sale.maps_url, "https://www.google.com/maps/"), target: "_blank", rel: "noopener",
+      text: sale.full_address }),
+    dayChips(sale, opts.from, opts.to, ctx.today));
+
+  if (sale.description) {
+    body.append(el("details", { class: "desc" }, el("summary", { text: "Details" }),
+      el("p", { text: (sale.directions_note ? sale.directions_note + "\n\n" : "") + sale.description })));
+  }
+
+  const node = el("article", { class: "card" + (opts.near ? " near" : "") }, body);
+  if (photos.length) {
+    const strip = el("div", { class: "strip" });
+    photos.forEach((p, i) => {
+      const img = el("img", { src: p.thumb || p.full, loading: "lazy", alt: `Photo ${i + 1} of ${photos.length}`, referrerpolicy: "no-referrer" });
+      img.addEventListener("error", () => { if (img.src !== p.full) img.src = p.full; }, { once: true });
+      const button = el("button", { type: "button", "aria-label": `Open photo ${i + 1} of ${photos.length}` }, img);
+      button.addEventListener("click", () => openViewer(photos, i));
+      strip.append(button);
+    });
+    node.append(strip);
+  } else {
+    node.append(el("div", { class: "nophotos", text: "No photos posted." }));
+  }
+  return node;
+}
+
+function section(title, count, nodes) {
+  return [el("h2", {}, title, el("span", { class: "count", text: count })), ...nodes];
+}
+
+function collapsed(title, count, nodes) {
+  return el("details", { class: "group" },
+    el("summary", {}, el("h2", {}, title, el("span", { class: "count", text: count }))), ...nodes);
+}
+
+function render(data) {
+  const now = new Date();
+  const today = isoDate(now);
+  const sundayDate = new Date(now); sundayDate.setDate(now.getDate() + ((7 - now.getDay()) % 7));
+  const sunday = isoDate(sundayDate);
+  const radius = data.nearby_radius_miles;
+  const ctx = { today };
+
+  const near = [], far = [], later = [], ongoing = [];
+  for (const sale of data.sales) {
+    if (sale.recurring || !sale.start) { ongoing.push(sale); continue; }
+    const start = sale.start.slice(0, 10), end = (sale.end || sale.start).slice(0, 10);
+    if (end < today) continue;
+    if (start > sunday) later.push(sale);
+    else (sale.distance_miles <= radius ? near : far).push(sale);
+  }
+  const byDistance = (a, b) => a.distance_miles - b.distance_miles;
+  [near, far, later, ongoing].forEach((list) => list.sort(byDistance));
+
+  const range = today === sunday ? shortDate(today) : `${shortDate(today)} – ${shortDate(sunday)}`;
+  $("sub").textContent = `${range} · updated ${ago(data.generated_at)}`;
+
+  const main = $("main");
+  main.replaceChildren();
+  if (data.last_error) {
+    main.append(el("div", { class: "notice", text: `The last update failed, so this may be out of date. (${data.last_error})` }));
+  }
+
+  const week = { from: today, to: sunday };
+  const nearNodes = near.length
+    ? near.map((s) => card(s, ctx, { ...week, near: true }))
+    : [el("div", { class: "empty", text: far.length
+        ? `Nothing within ${radius} mi through Sunday. The closest sale is ${far[0].distance_miles.toFixed(1)} mi away.`
+        : `Nothing within ${radius} mi through Sunday.` })];
+  main.append(...section(`Nearby`, `within ${radius} mi · ${near.length}`, nearNodes));
+
+  if (far.length) main.append(...section("Rest of town", `${far.length}`, far.map((s) => card(s, ctx, week))));
+  if (later.length) {
+    main.append(collapsed("Coming up", `${later.length} after Sunday`,
+      later.map((s) => card(s, ctx, { from: s.start.slice(0, 10), to: "9999-12-31", near: s.distance_miles <= radius }))));
+  }
+  if (ongoing.length) {
+    main.append(collapsed("Shops, markets & auctions", `${ongoing.length} recurring`,
+      ongoing.map((s) => card(s, ctx, { ...week, ongoing: true }))));
+  }
+
+  $("footer").replaceChildren(
+    "Distances are straight-line from home. Listings from ",
+    el("a", { href: safeUrl(data.source, PHOTO_HOST), target: "_blank", rel: "noopener", text: "Estate Sale Finder" }),
+    ". Data: ", el("a", { href: "sales.json", text: "sales.json" }),
+    " · ", el("a", { href: "api/summary", text: "summary" }), ".");
+}
+
+async function load() {
+  try {
+    const response = await fetch("sales.json", { cache: "no-store" });
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error || `HTTP ${response.status}`);
+    render(data);
+  } catch (error) {
+    $("sub").textContent = "Could not load sales.";
+    $("main").replaceChildren(el("div", { class: "notice", text: String(error.message || error) }));
+  }
+}
+
+$("refresh").addEventListener("click", async () => {
+  const button = $("refresh");
+  button.disabled = true; button.textContent = "Refreshing…";
+  let message = null;
+  try {
+    const response = await fetch("api/refresh", { method: "POST" });
+    if (!response.ok) message = (await response.json()).error;
+  } catch (error) { message = String(error.message || error); }
+  await load();
+  if (message) $("main").prepend(el("div", { class: "notice", text: message }));
+  button.disabled = false; button.textContent = "Refresh";
+});
+
+load();
+</script>
+</body>
+</html>
